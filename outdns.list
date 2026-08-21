@@ -1,4 +1,4 @@
-DOMAIN,dns.google
-DOMAIN,cloudflare-dns.com
-DOMAIN,dns.quad9.net
-DOMAIN,dns.twnic.tw
+dns.google
+cloudflare-dns.com
+dns.quad9.net
+dns.twnic.tw
