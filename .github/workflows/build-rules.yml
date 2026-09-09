@@ -83,16 +83,33 @@ jobs:
         run: |
           set -euxo pipefail
 
-          echo "Downloading Mihomo..."
+          API="https://api.github.com/repos/MetaCubeX/mihomo/releases/latest"
+
+          echo "Getting latest Mihomo release..."
+
+          VERSION=$(curl -fsSL "$API" | jq -r '.tag_name')
+          VERSION="${VERSION#v}"
+
+          echo "Mihomo version: ${VERSION}"
+
+          FILE="mihomo-linux-amd64-compatible-v${VERSION}.gz"
+
+          URL="https://github.com/MetaCubeX/mihomo/releases/download/v${VERSION}/${FILE}"
+
+          echo "Download URL:"
+          echo "$URL"
 
           curl -fL \
-            https://github.com/MetaCubeX/mihomo/releases/download/Prerelease-Alpha/mihomo-linux-amd64-compatible \
-            -o mihomo
+            "$URL" \
+            -o mihomo.gz
+
+          gunzip mihomo.gz
 
           chmod +x mihomo
 
-          sudo mv mihomo /usr/local/bin/mihomo
+          sudo install mihomo /usr/local/bin/mihomo
 
+          echo "Mihomo installed:"
           mihomo version
 
       # =========================
