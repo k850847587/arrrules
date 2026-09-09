@@ -75,17 +75,12 @@ jobs:
 
           sing-box version
 
-      # =========================
-      # Install Mihomo
-      # =========================
       - name: Install Mihomo
         shell: bash
         run: |
           set -euxo pipefail
 
           API="https://api.github.com/repos/MetaCubeX/mihomo/releases/latest"
-
-          echo "Getting latest Mihomo release..."
 
           VERSION=$(curl -fsSL "$API" | jq -r '.tag_name')
           VERSION="${VERSION#v}"
@@ -99,9 +94,7 @@ jobs:
           echo "Download URL:"
           echo "$URL"
 
-          curl -fL \
-            "$URL" \
-            -o mihomo.gz
+          curl -fL "$URL" -o mihomo.gz
 
           gunzip mihomo.gz
 
@@ -109,8 +102,9 @@ jobs:
 
           sudo install mihomo /usr/local/bin/mihomo
 
-          echo "Mihomo installed:"
-          mihomo version
+          echo "Mihomo installed successfully"
+
+          mihomo -v
 
       # =========================
       # Build rules
