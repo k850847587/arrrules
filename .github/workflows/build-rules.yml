@@ -24,13 +24,13 @@ jobs:
       # Checkout
       # =========================
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # =========================
       # Setup Python
       # =========================
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.x"
 
@@ -42,17 +42,30 @@ jobs:
         run: |
           set -e
 
-          VERSION=$(curl -fsSL \
-            https://api.github.com/repos/SagerNet/sing-box/releases/latest \
-            | jq -r '.tag_name')
+          echo "Getting latest sing-box release..."
 
+          API="https://api.github.com/repos/SagerNet/sing-box/releases/latest"
+
+          VERSION=$(curl -fsSL "$API" | jq -r '.tag_name')
           VERSION="${VERSION#v}"
 
-          echo "Installing sing-box ${VERSION}"
+          echo "sing-box version: ${VERSION}"
 
-          wget -q \
-            "https://github.com/SagerNet/sing-box/releases/download/v${VERSION}/sing-box-${VERSION}-linux-amd64.tar.gz" \
-            -O sing-box.tar.gz
+          URL=$(curl -fsSL "$API" |
+            jq -r --arg VERSION "$VERSION" '
+              .assets[]
+              | select(.name == ("sing-box-" + $VERSION + "-linux-amd64.tar.gz"))
+              | .browser_download_url
+            ')
+
+          if [ -z "$URL" ]; then
+            echo "ERROR: sing-box download URL not found"
+            exit 1
+          fi
+
+          echo "Download: $URL"
+
+          wget -q "$URL" -O sing-box.tar.gz
 
           tar -xzf sing-box.tar.gz
 
@@ -70,30 +83,65 @@ jobs:
         run: |
           set -e
 
-          VERSION=$(curl -fsSL \
-            https://api.github.com/repos/MetaCubeX/mihomo/releases/latest \
-            | jq -r '.tag_name')
+          echo "Getting latest Mihomo release..."
 
+          API="https://api.github.com/repos/MetaCubeX/mihomo/releases/latest"
+
+          VERSION=$(curl -fsSL "$API" | jq -r '.tag_name')
           VERSION="${VERSION#v}"
 
-          echo "Installing Mihomo ${VERSION}"
+          echo "Mihomo version: ${VERSION}"
 
-          URL="https://github.com/MetaCubeX/mihomo/releases/download/v${VERSION}/mihomo-linux-amd64-compatible-${VERSION}.gz"
+          URL=$(curl -fsSL "$API" |
+            jq -r '
+              .assets[]
+              | select(
+                  (.name | test("linux-amd64"))
+                  and
+                  (.name | test("\\.(gz|zip)$"))
+                  and
+                  (.name | contains("compatible"))
+                )
+              | .browser_download_url
+            ' |
+            head -n 1)
 
-          wget -q \
-            "$URL" \
-            -O mihomo.gz
+          if [ -z "$URL" ]; then
+            echo "ERROR: Mihomo download URL not found"
+            echo "Available assets:"
+            curl -fsSL "$API" | jq -r '.assets[].name'
+            exit 1
+          fi
 
-          gunzip mihomo.gz
+          echo "Download: $URL"
 
-          chmod +x mihomo
+          wget -q "$URL" -O mihomo.pkg
 
-          sudo install mihomo /usr/local/bin/mihomo
+          case "$URL" in
+            *.gz)
+              gunzip -f mihomo.pkg
+              mv mihomo mihomo-bin
+              ;;
+
+            *.zip)
+              unzip -o mihomo.pkg
+              mv mihomo* mihomo-bin
+              ;;
+
+            *)
+              echo "Unknown archive format"
+              exit 1
+              ;;
+          esac
+
+          chmod +x mihomo-bin
+
+          sudo install mihomo-bin /usr/local/bin/mihomo
 
           mihomo version
 
       # =========================
-      # Build
+      # Build rules
       # =========================
       - name: Build rules
         run: |
@@ -104,15 +152,19 @@ jobs:
       # =========================
       - name: Show generated files
         run: |
-          echo "===== MRS ====="
+          echo "========================================"
+          echo "MRS"
+          echo "========================================"
           ls -lh mrs/ || true
 
           echo
-          echo "===== SRS ====="
+          echo "========================================"
+          echo "SRS"
+          echo "========================================"
           ls -lh srs/ || true
 
       # =========================
-      # Commit
+      # Commit generated rules
       # =========================
       - name: Commit generated rules
         shell: bash
