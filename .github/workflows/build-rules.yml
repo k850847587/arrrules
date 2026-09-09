@@ -1,0 +1,70 @@
+name: Build Rules
+
+on:
+  push:
+    paths:
+      - "source/*.list"
+      - "scripts/**"
+      - ".github/workflows/build-rules.yml"
+
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download sing-box
+        run: |
+          VERSION=$(curl -s https://api.github.com/repos/SagerNet/sing-box/releases/latest | jq -r .tag_name)
+          VERSION=${VERSION#v}
+
+          wget -q \
+            "https://github.com/SagerNet/sing-box/releases/download/v${VERSION}/sing-box-${VERSION}-linux-amd64.tar.gz"
+
+          tar -xzf "sing-box-${VERSION}-linux-amd64.tar.gz"
+
+          sudo cp "sing-box-${VERSION}-linux-amd64/sing-box" /usr/local/bin/
+          sudo chmod +x /usr/local/bin/sing-box
+
+          sing-box version
+
+      - name: Download Mihomo
+        run: |
+          VERSION=$(curl -s https://api.github.com/repos/MetaCubeX/mihomo/releases/latest | jq -r .tag_name)
+          VERSION=${VERSION#v}
+
+          wget -q \
+            "https://github.com/MetaCubeX/mihomo/releases/download/v${VERSION}/mihomo-linux-amd64-v3-${VERSION}.gz" \
+            -O mihomo.gz
+
+          gunzip mihomo.gz
+          chmod +x mihomo
+          sudo mv mihomo /usr/local/bin/mihomo
+
+          mihomo version
+
+      - name: Build rules
+        run: |
+          python3 scripts/build.py
+
+      - name: Commit generated rules
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add mrs srs
+
+          if git diff --cached --quiet; then
+            echo "No changes"
+            exit 0
+          fi
+
+          git commit -m "build: update rules"
+          git push
