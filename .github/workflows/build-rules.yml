@@ -81,62 +81,17 @@ jobs:
       - name: Install Mihomo
         shell: bash
         run: |
-          set -e
+          set -euxo pipefail
 
-          echo "Getting latest Mihomo release..."
+          echo "Downloading Mihomo..."
 
-          API="https://api.github.com/repos/MetaCubeX/mihomo/releases/latest"
+          curl -fL \
+            https://github.com/MetaCubeX/mihomo/releases/download/Prerelease-Alpha/mihomo-linux-amd64-compatible \
+            -o mihomo
 
-          VERSION=$(curl -fsSL "$API" | jq -r '.tag_name')
-          VERSION="${VERSION#v}"
+          chmod +x mihomo
 
-          echo "Mihomo version: ${VERSION}"
-
-          URL=$(curl -fsSL "$API" |
-            jq -r '
-              .assets[]
-              | select(
-                  (.name | test("linux-amd64"))
-                  and
-                  (.name | test("\\.(gz|zip)$"))
-                  and
-                  (.name | contains("compatible"))
-                )
-              | .browser_download_url
-            ' |
-            head -n 1)
-
-          if [ -z "$URL" ]; then
-            echo "ERROR: Mihomo download URL not found"
-            echo "Available assets:"
-            curl -fsSL "$API" | jq -r '.assets[].name'
-            exit 1
-          fi
-
-          echo "Download: $URL"
-
-          wget -q "$URL" -O mihomo.pkg
-
-          case "$URL" in
-            *.gz)
-              gunzip -f mihomo.pkg
-              mv mihomo mihomo-bin
-              ;;
-
-            *.zip)
-              unzip -o mihomo.pkg
-              mv mihomo* mihomo-bin
-              ;;
-
-            *)
-              echo "Unknown archive format"
-              exit 1
-              ;;
-          esac
-
-          chmod +x mihomo-bin
-
-          sudo install mihomo-bin /usr/local/bin/mihomo
+          sudo mv mihomo /usr/local/bin/mihomo
 
           mihomo version
 
