@@ -2,6 +2,8 @@ name: Build Rules
 
 on:
   push:
+    branches:
+      - main
     paths:
       - "source/*.list"
       - "scripts/**"
@@ -17,52 +19,113 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
+      # =========================
+      # Checkout
+      # =========================
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Download sing-box
+      # =========================
+      # Setup Python
+      # =========================
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      # =========================
+      # Install sing-box
+      # =========================
+      - name: Install sing-box
+        shell: bash
         run: |
-          VERSION=$(curl -s https://api.github.com/repos/SagerNet/sing-box/releases/latest | jq -r .tag_name)
-          VERSION=${VERSION#v}
+          set -e
+
+          VERSION=$(curl -fsSL \
+            https://api.github.com/repos/SagerNet/sing-box/releases/latest \
+            | jq -r '.tag_name')
+
+          VERSION="${VERSION#v}"
+
+          echo "Installing sing-box ${VERSION}"
 
           wget -q \
-            "https://github.com/SagerNet/sing-box/releases/download/v${VERSION}/sing-box-${VERSION}-linux-amd64.tar.gz"
+            "https://github.com/SagerNet/sing-box/releases/download/v${VERSION}/sing-box-${VERSION}-linux-amd64.tar.gz" \
+            -O sing-box.tar.gz
 
-          tar -xzf "sing-box-${VERSION}-linux-amd64.tar.gz"
+          tar -xzf sing-box.tar.gz
 
-          sudo cp "sing-box-${VERSION}-linux-amd64/sing-box" /usr/local/bin/
-          sudo chmod +x /usr/local/bin/sing-box
+          sudo install \
+            "sing-box-${VERSION}-linux-amd64/sing-box" \
+            /usr/local/bin/sing-box
 
           sing-box version
 
-      - name: Download Mihomo
+      # =========================
+      # Install Mihomo
+      # =========================
+      - name: Install Mihomo
+        shell: bash
         run: |
-          VERSION=$(curl -s https://api.github.com/repos/MetaCubeX/mihomo/releases/latest | jq -r .tag_name)
-          VERSION=${VERSION#v}
+          set -e
+
+          VERSION=$(curl -fsSL \
+            https://api.github.com/repos/MetaCubeX/mihomo/releases/latest \
+            | jq -r '.tag_name')
+
+          VERSION="${VERSION#v}"
+
+          echo "Installing Mihomo ${VERSION}"
+
+          URL="https://github.com/MetaCubeX/mihomo/releases/download/v${VERSION}/mihomo-linux-amd64-compatible-${VERSION}.gz"
 
           wget -q \
-            "https://github.com/MetaCubeX/mihomo/releases/download/v${VERSION}/mihomo-linux-amd64-v3-${VERSION}.gz" \
+            "$URL" \
             -O mihomo.gz
 
           gunzip mihomo.gz
+
           chmod +x mihomo
-          sudo mv mihomo /usr/local/bin/mihomo
+
+          sudo install mihomo /usr/local/bin/mihomo
 
           mihomo version
 
+      # =========================
+      # Build
+      # =========================
       - name: Build rules
         run: |
           python3 scripts/build.py
 
-      - name: Commit generated rules
+      # =========================
+      # Show generated files
+      # =========================
+      - name: Show generated files
         run: |
+          echo "===== MRS ====="
+          ls -lh mrs/ || true
+
+          echo
+          echo "===== SRS ====="
+          ls -lh srs/ || true
+
+      # =========================
+      # Commit
+      # =========================
+      - name: Commit generated rules
+        shell: bash
+        run: |
+          set -e
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
           git add mrs srs
 
           if git diff --cached --quiet; then
-            echo "No changes"
+            echo "No generated rule changes."
             exit 0
           fi
 
