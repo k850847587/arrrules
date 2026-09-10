@@ -175,13 +175,13 @@ def build_mrs(name, rules):
         with domain_source.open("w", encoding="utf-8") as f:
 
             for domain in rules["domain"]:
-                f.write(f"DOMAIN,{domain}\n")
+                f.write(f"+.{domain}\n")
 
             for domain in rules["domain_suffix"]:
-                f.write(f"DOMAIN-SUFFIX,{domain}\n")
+                f.write(f"+.{domain}\n")
 
             for domain in rules["domain_keyword"]:
-                f.write(f"DOMAIN-KEYWORD,{domain}\n")
+                f.write(f"+.{domain}\n")
 
         print(f"Building MRS: {domain_output}")
 
