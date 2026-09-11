@@ -5,7 +5,7 @@
  * Surge/Loon 版 请查看: https://t.me/zhetengsha/1207
  *
  * 欢迎加入 Telegram 群组 https://t.me/zhetengsha
- *
+ * 
  * HTTP META(https://github.com/xream/http-meta) 参数
  * - [http_meta_protocol] 协议 默认: http
  * - [http_meta_host] 服务地址 默认: 127.0.0.1
@@ -13,7 +13,7 @@
  * - [http_meta_authorization] Authorization 默认无
  * - [http_meta_start_delay] 初始启动延时(单位: 毫秒) 默认: 3000
  * - [http_meta_proxy_timeout] 每个节点耗时(单位: 毫秒). 此参数是为了防止脚本异常退出未关闭核心. 设置过小将导致核心过早退出. 目前逻辑: 启动初始的延时 + 每个节点耗时. 默认: 10000
- *
+ * https://cdn.jsdelivr.net/gh/k850847587/arrrules@main/scripts/sub-store-gpt.js#cache=true&http_meta_proxy_timeout=7000&http_meta_start_delay=1500&timeout=2000&retries=1&retry_delay=500&concurrency=30
  * 其它参数
  * - [timeout] 请求超时(单位: 毫秒) 默认 5000
  * - [retries] 重试次数 默认 1
@@ -120,9 +120,10 @@ async function operator(proxies = [], targetPlatform, context) {
     body: JSON.stringify({
       proxies: internalProxies,
       timeout: http_meta_timeout,
-      dns: {
+       dns: {
         enable: true,
-        'proxy-server-nameserver': ['udp://192.168.11.110:11153']
+        'proxy-server-nameserver': ['udp://192.168.11.110:11153'],
+       
       },
     }),
   })
