@@ -93,13 +93,13 @@ yaml.dns["fake-ip-filter"] = [
 
 $.info(`[fake-ip-filter] 成功插入 ${newfakeipfilter.length} 个域名`);
 
-// 5. 处理 proxy-server-nameserver-policy (严格区分文件，使用对应文件的 psnList)
+// 5. 处理 proxy-server-nameserver-policy (严格区分文件，使用对应文件的 psnList，域名前面加 +.)
 yaml.dns["proxy-server-nameserver-policy"] = yaml.dns["proxy-server-nameserver-policy"] || {};
 
 for (const item of fileResults) {
   if (Array.isArray(item.psnList) && item.psnList.length > 0 && Array.isArray(item.serverDomains)) {
     for (const domain of item.serverDomains) {
-      yaml.dns["proxy-server-nameserver-policy"][domain] = item.psnList;
+      yaml.dns["proxy-server-nameserver-policy"][`+.${domain}`] = item.psnList;
     }
   }
 }
