@@ -42,3 +42,4 @@ DOMAIN,firefox-settings-attachments.cdn.mozilla.net
 DOMAIN,location.services.mozilla.com
 DOMAIN,cleanuparr-status.pages.dev
 DOMAIN-SUFFIX,mozilla.com
+DOMAIN-SUFFIX,prowlarr.com
