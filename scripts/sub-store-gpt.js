@@ -1,25 +1,31 @@
 /**
- * 感谢 群友 @utopter 投稿
- * 说明:
- * - 增加了用于匹配对特定正则项目进行检测，检测项目为 iOS 和 Chrome,iOS 检测 ios.chat.openai.com 返回 403，Chrome 检测 chat.openai.com GET 返回 200
- * - [node_name_regex] 用于匹配节点名称的正则表达式
  *
+ * GPT 检测(适配 Sub-Store Node.js 版)
+ *
+ * Surge/Loon 版 请查看: https://t.me/zhetengsha/1207
+ *
+ * 欢迎加入 Telegram 群组 https://t.me/zhetengsha
+ * 
  * HTTP META(https://github.com/xream/http-meta) 参数
  * - [http_meta_protocol] 协议 默认: http
  * - [http_meta_host] 服务地址 默认: 127.0.0.1
  * - [http_meta_port] 端口号 默认: 9876
+ * - [http_meta_authorization] Authorization 默认无
  * - [http_meta_start_delay] 初始启动延时(单位: 毫秒) 默认: 3000
  * - [http_meta_proxy_timeout] 每个节点耗时(单位: 毫秒). 此参数是为了防止脚本异常退出未关闭核心. 设置过小将导致核心过早退出. 目前逻辑: 启动初始的延时 + 每个节点耗时. 默认: 10000
- *
+ * https://cdn.jsdelivr.net/gh/k850847587/arrrules@main/scripts/sub-store-gpt.js#cache=true&http_meta_proxy_timeout=7000&http_meta_start_delay=1500&timeout=2000&retries=1&retry_delay=500&concurrency=30
  * 其它参数
  * - [timeout] 请求超时(单位: 毫秒) 默认 5000
  * - [retries] 重试次数 默认 1
  * - [retry_delay] 重试延时(单位: 毫秒) 默认 1000
  * - [concurrency] 并发数 默认 10
  * - [client] GPT 检测的客户端类型. 默认 iOS
- * - [method] 请求方法. 默认 head, 如果不支持, 可设为 get
- * - [node_name_regex] 用于匹配节点名称的正则表达式
+ * - [method] 请求方法. 默认 get
+ * - [gpt_prefix] 显示前缀. 默认为 "[GPT] "
+ 注: 节点上总是会添加一个 _gpt 字段, 可用于脚本筛选. 新增 _gpt_latency 字段, 指响应延迟
+ * - [include_unsupported_proxy] 传递给运行环境时, 包含官方/商店版不支持的协议. 默认不包含. 若开启, 需要保证你的运行环境确实支持这些协议, 不然会报错
  * - [cache] 使用缓存, 默认不使用缓存
+ * - [disable_failed_cache/ignore_failed_error] 禁用失败缓存. 即不缓存失败结果
  * 关于缓存时长
  * 当使用相关脚本时, 若在对应的脚本中使用参数(⚠ 别忘了这个, 一般为 cache, 值设为 true 即可)开启缓存
  * 可在前端(>=2.16.0) 配置各项缓存的默认时长
@@ -33,27 +39,33 @@
 async function operator(proxies = [], targetPlatform, context) {
   scriptResourceCache._cleanup(undefined, 5 * 3600 * 1000);
   const cacheEnabled = $arguments.cache
+  const disableFailedCache = $arguments.disable_failed_cache || $arguments.ignore_failed_error
   const cache = scriptResourceCache
+  const includeUnsupportedProxy = $arguments.include_unsupported_proxy
   const http_meta_host = $arguments.http_meta_host ?? '127.0.0.1'
   const http_meta_port = $arguments.http_meta_port ?? 9876
   const http_meta_protocol = $arguments.http_meta_protocol ?? 'http'
+  const http_meta_authorization = $arguments.http_meta_authorization ?? ''
   const http_meta_api = `${http_meta_protocol}://${http_meta_host}:${http_meta_port}`
   const http_meta_start_delay = parseFloat($arguments.http_meta_start_delay ?? 3000)
   const http_meta_proxy_timeout = parseFloat($arguments.http_meta_proxy_timeout ?? 10000)
-  const method = $arguments.method || 'head'
-  const url = $arguments.client === 'Chrome' ? `https://chat.openai.com` : `https://ios.chat.openai.com`
-
-  // 获取正则表达式
-  const regex = new RegExp($arguments.node_name_regex || '.*')
+  const gptPrefix = $arguments.gpt_prefix ?? '[GPT] '
+  const method = $arguments.method || 'get'
+  const url = $arguments.client === 'Android' ? `https://android.chat.openai.com` : `https://ios.chat.openai.com`
 
   const $ = $substore
-  // 过滤节点列表，仅保留匹配正则表达式的节点
-  const filteredProxies = proxies.filter(proxy => regex.test(proxy.name))
   const internalProxies = []
-  filteredProxies.map((proxy, index) => {
+  proxies.map((proxy, index) => {
     try {
-      const node = ProxyUtils.produce([proxy], 'ClashMeta', 'internal')?.[0]
+      const node = ProxyUtils.produce([{ ...proxy }], 'ClashMeta', 'internal', {
+        'include-unsupported-proxy': includeUnsupportedProxy,
+      })?.[0]
       if (node) {
+        for (const key in proxy) {
+          if (/^_/i.test(key)) {
+            node[key] = proxy[key]
+          }
+        }
         // $.info(JSON.stringify(node, null, 2))
         internalProxies.push({ ...node, _proxies_index: index })
       }
@@ -62,7 +74,7 @@ async function operator(proxies = [], targetPlatform, context) {
     }
   })
   // $.info(JSON.stringify(internalProxies, null, 2))
-  $.info(`核心支持节点数: ${internalProxies.length}/${filteredProxies.length}`)
+  $.info(`核心支持节点数: ${internalProxies.length}/${proxies.length}`)
   if (!internalProxies.length) return proxies
 
   if (cacheEnabled) {
@@ -74,7 +86,12 @@ async function operator(proxies = [], targetPlatform, context) {
         const cached = cache.get(id)
         if (cached) {
           if (cached.gpt) {
-            proxies[proxy._proxies_index].name = `[GPT] ${proxies[proxy._proxies_index].name}`
+            proxies[proxy._proxies_index].name = `${gptPrefix}${proxies[proxy._proxies_index].name}`
+            proxies[proxy._proxies_index]._gpt = true
+            proxies[proxy._proxies_index]._gpt_latency = cached.gpt_latency
+          } else if (disableFailedCache) {
+            allCached = false
+            break
           }
         } else {
           allCached = false
@@ -99,15 +116,16 @@ async function operator(proxies = [], targetPlatform, context) {
     url: `${http_meta_api}/start`,
     headers: {
       'Content-type': 'application/json',
+      Authorization: http_meta_authorization,
     },
     body: JSON.stringify({
       proxies: internalProxies,
       timeout: http_meta_timeout,
-      dns: {
+       dns: {
         enable: true,
         'proxy-server-nameserver': ['udp://192.168.11.110:11153'],
        
-    },
+      },
     }),
   })
   let body = res.body
@@ -128,16 +146,20 @@ async function operator(proxies = [], targetPlatform, context) {
   $.info(`等待 ${http_meta_start_delay / 1000} 秒后开始检测`)
   await $.wait(http_meta_start_delay)
 
-  const batches = []
   const concurrency = parseInt($arguments.concurrency || 10) // 一组并发数
-  for (let i = 0; i < internalProxies.length; i += concurrency) {
-    const batch = internalProxies.slice(i, i + concurrency)
-    batches.push(batch)
-  }
+  await executeAsyncTasks(
+    internalProxies.map(proxy => () => check(proxy)),
+    { concurrency }
+  )
 
-  for (const batch of batches) {
-    await Promise.all(batch.map(check))
-  }
+  // const batches = []
+  // for (let i = 0; i < internalProxies.length; i += concurrency) {
+  //   const batch = internalProxies.slice(i, i + concurrency)
+  //   batches.push(batch)
+  // }
+  // for (const batch of batches) {
+  //   await Promise.all(batch.map(check))
+  // }
 
   // stop http meta
   try {
@@ -146,6 +168,7 @@ async function operator(proxies = [], targetPlatform, context) {
       url: `${http_meta_api}/stop`,
       headers: {
         'Content-type': 'application/json',
+        Authorization: http_meta_authorization,
       },
       body: JSON.stringify({
         pid: [http_meta_pid],
@@ -166,11 +189,18 @@ async function operator(proxies = [], targetPlatform, context) {
     try {
       const cached = cache.get(id)
       if (cacheEnabled && cached) {
-        $.info(`[${proxy.name}] 使用缓存`)
         if (cached.gpt) {
-          proxies[proxy._proxies_index].name = `[GPT] ${proxies[proxy._proxies_index].name}`
+          proxies[proxy._proxies_index].name = `${gptPrefix}${proxies[proxy._proxies_index].name}`
+          proxies[proxy._proxies_index]._gpt = true
+          proxies[proxy._proxies_index]._gpt_latency = cached.gpt_latency
+          $.info(`[${proxy.name}] 使用成功缓存`)
+          return
+        } else if (disableFailedCache) {
+          $.info(`[${proxy.name}] 不使用失败缓存`)
+        } else {
+          $.info(`[${proxy.name}] 使用失败缓存`)
+          return
         }
-        return
       }
       // $.info(JSON.stringify(proxy, null, 2))
       const index = internalProxies.indexOf(proxy)
@@ -185,18 +215,24 @@ async function operator(proxies = [], targetPlatform, context) {
         url,
       })
       const status = parseInt(res.status || res.statusCode || 200)
-      let latency = ''
-      latency = `${Date.now() - startedAt}`
-      $.info(`[${proxy.name}] status: ${status}, latency: ${latency}`)
-      // cf 拦截是 400 错误, 403 就是没被拦截, 走到了未鉴权的逻辑，网页版返回200为正确
+      let body = String(res.body ?? res.rawBody)
+      try {
+        body = JSON.parse(body)
+      } catch (e) {}
+      // $.info(`body ${JSON.stringify(body, null, 2)}`)
+      const msg = body?.error?.code || body?.error?.error_type || body?.cf_details
+      const latency = Date.now() - startedAt
+      $.info(`[${proxy.name}] status: ${status}, msg: ${msg}, latency: ${latency}`)
+      // cf 拦截是 400 错误, 403 就是没被拦截, 走到了未鉴权的逻辑
       // https://zset.cc/archives/34/
-      const isIOS = $arguments.client === 'iOS'
-      const successStatus = isIOS ? 403 : 200 // 根据客户端类型设置成功状态码
-      if (status === successStatus) {
-        proxies[proxy._proxies_index].name = `[GPT] ${proxies[proxy._proxies_index].name}`
+      // 更新: 403 的时候, 还得看响应
+      if (status == 403 && !/unsupported_country/.test(msg)) {
+        proxies[proxy._proxies_index].name = `${gptPrefix}${proxies[proxy._proxies_index].name}`
+        proxies[proxy._proxies_index]._gpt = true
+        proxies[proxy._proxies_index]._gpt_latency = latency
         if (cacheEnabled) {
           $.info(`[${proxy.name}] 设置成功缓存`)
-          cache.set(id, { gpt: true })
+          cache.set(id, { gpt: true, gpt_latency: latency })
         }
       } else {
         if (cacheEnabled) {
@@ -242,5 +278,47 @@ async function operator(proxies = [], targetPlatform, context) {
     return `http-meta:gpt:${url}:${JSON.stringify(
       Object.fromEntries(Object.entries(proxy).filter(([key]) => !/^(name|collectionName|subName|id|_.*)$/i.test(key)))
     )}`
+  }
+  function executeAsyncTasks(tasks, { wrap, result, concurrency = 1 } = {}) {
+    return new Promise(async (resolve, reject) => {
+      try {
+        let running = 0
+        const results = []
+
+        let index = 0
+
+        function executeNextTask() {
+          while (index < tasks.length && running < concurrency) {
+            const taskIndex = index++
+            const currentTask = tasks[taskIndex]
+            running++
+
+            currentTask()
+              .then(data => {
+                if (result) {
+                  results[taskIndex] = wrap ? { data } : data
+                }
+              })
+              .catch(error => {
+                if (result) {
+                  results[taskIndex] = wrap ? { error } : error
+                }
+              })
+              .finally(() => {
+                running--
+                executeNextTask()
+              })
+          }
+
+          if (running === 0) {
+            return resolve(result ? results : undefined)
+          }
+        }
+
+        await executeNextTask()
+      } catch (e) {
+        reject(e)
+      }
+    })
   }
 }
