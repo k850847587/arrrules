@@ -31,6 +31,7 @@
  */
 
 async function operator(proxies = [], targetPlatform, context) {
+  scriptResourceCache._cleanup(undefined, 5 * 3600 * 1000);
   const cacheEnabled = $arguments.cache
   const cache = scriptResourceCache
   const http_meta_host = $arguments.http_meta_host ?? '127.0.0.1'
@@ -104,7 +105,7 @@ async function operator(proxies = [], targetPlatform, context) {
       timeout: http_meta_timeout,
       dns: {
         enable: true,
-        'proxy-server-nameserver': ['https://dns.alidns.com/dns-query'],
+        'proxy-server-nameserver': ['udp://192.168.11.110:11153'],
        
     },
     }),
