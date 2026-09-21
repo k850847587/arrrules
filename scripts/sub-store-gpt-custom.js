@@ -37,6 +37,7 @@
  */
 
 async function operator(proxies = [], targetPlatform, context) {
+  scriptResourceCache._cleanup(undefined, 5 * 3600 * 1000);
   const cacheEnabled = $arguments.cache
   const disableFailedCache = $arguments.disable_failed_cache || $arguments.ignore_failed_error
   const cache = scriptResourceCache
