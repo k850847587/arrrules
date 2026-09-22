@@ -38,12 +38,10 @@ DOMAIN-SUFFIX,hdrtorrent.com
 DOMAIN-SUFFIX,extratorrent.st
 DOMAIN-SUFFIX,e-hentai.org
 DOMAIN-SUFFIX,zamunda.rip
-DOMAIN,firefox-settings-attachments.cdn.mozilla.net
-DOMAIN,location.services.mozilla.com
 DOMAIN,cleanuparr-status.pages.dev
-DOMAIN-SUFFIX,mozilla.com
 DOMAIN-SUFFIX,prowlarr.com
 DOMAIN-SUFFIX,hdrtorrents.net
 DOMAIN-SUFFIX,radarr.video
+DOMAIN-SUFFIX,mozilla.com
 DOMAIN,aus5.mozilla.org
 DOMAIN-SUFFIX,mozilla.net
