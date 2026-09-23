@@ -42,6 +42,8 @@ DOMAIN,cleanuparr-status.pages.dev
 DOMAIN-SUFFIX,prowlarr.com
 DOMAIN-SUFFIX,hdrtorrents.net
 DOMAIN-SUFFIX,radarr.video
+DOMAIN-SUFFIX,theaudiodb.com
+DOMAIN-SUFFIX,musicbrainz.org
 DOMAIN-SUFFIX,mozilla.com
 DOMAIN-SUFFIX,mozilla.org
 DOMAIN-SUFFIX,mozilla.net
