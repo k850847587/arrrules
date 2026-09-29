@@ -48,7 +48,7 @@ async function operator(proxies = [], targetPlatform, context) {
   const http_meta_api = `${http_meta_protocol}://${http_meta_host}:${http_meta_port}`
   const http_meta_start_delay = parseFloat($arguments.http_meta_start_delay ?? 3000)
   const http_meta_proxy_timeout = parseFloat($arguments.http_meta_proxy_timeout ?? 10000)
-  const http_meta_dns = $arguments.http_meta_dns ?? 'udp://192.168.11.110:11153'
+  const http_meta_dns = $arguments.http_meta_dns ?? 'https://dns.alidns.com/dns-query'
   const gptPrefix = $arguments.gpt_prefix ?? '[GPT] '
   const method = $arguments.method || 'get'
   const url = $arguments.client === 'Android' ? `https://android.chat.openai.com` : `https://ios.chat.openai.com`
