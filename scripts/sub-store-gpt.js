@@ -123,7 +123,7 @@ async function operator(proxies = [], targetPlatform, context) {
       timeout: http_meta_timeout,
        dns: {
         enable: true,
-        'proxy-server-nameserver': ['udp://${dns}'],
+        'proxy-server-nameserver': ['${dns}'],
        
       },
     }),
