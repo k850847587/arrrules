@@ -50,6 +50,7 @@ async function operator(proxies = [], targetPlatform, context) {
   const http_meta_proxy_timeout = parseFloat($arguments.http_meta_proxy_timeout ?? 10000)
   const gptPrefix = $arguments.gpt_prefix ?? '[GPT] '
   const method = $arguments.method || 'get'
+  const dns = $arguments.dns ?? 'https://dns.alidns.com/dns-query'
   const url = $arguments.client === 'Android' ? `https://android.chat.openai.com` : `https://ios.chat.openai.com`
 
   const $ = $substore
@@ -122,7 +123,7 @@ async function operator(proxies = [], targetPlatform, context) {
       timeout: http_meta_timeout,
        dns: {
         enable: true,
-        'proxy-server-nameserver': ['udp://192.168.11.110:11153'],
+        'proxy-server-nameserver': ['udp://${dns}'],
        
       },
     }),
