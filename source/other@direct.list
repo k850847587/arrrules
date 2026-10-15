@@ -8,3 +8,5 @@ DOMAIN-SUFFIX,qianwenaiapi.com
 DOMAIN-SUFFIX,mozilla.com
 DOMAIN-SUFFIX,mozilla.org
 DOMAIN-SUFFIX,mozilla.net
+DOMAIN,mozilla-ohttp.fastly-edge.com
+DOMAIN-SUFFIX,mozgcp.net
