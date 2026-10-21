@@ -175,7 +175,7 @@ def build_mrs(name, rules):
         with domain_source.open("w", encoding="utf-8") as f:
 
             for domain in rules["domain"]:
-                f.write(f"+.{domain}\n")
+                f.write(f"{domain}\n")
 
             for domain in rules["domain_suffix"]:
                 f.write(f"+.{domain}\n")
